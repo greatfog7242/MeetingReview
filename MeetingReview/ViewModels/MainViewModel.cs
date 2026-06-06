@@ -112,6 +112,8 @@ public partial class MainViewModel : ObservableObject
     private static string? PickFile(string filter)
     {
         var dlg = new Microsoft.Win32.OpenFileDialog { Filter = filter };
-        return dlg.ShowDialog() == true ? dlg.FileName : null;
+        return dlg.ShowDialog(System.Windows.Application.Current.MainWindow) == true
+            ? dlg.FileName
+            : null;
     }
 }
