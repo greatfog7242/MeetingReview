@@ -19,7 +19,7 @@ public sealed class GeminiService : IGeminiService
         string transcriptText,
         string userPrompt,
         string apiKey,
-        string model = "gemini-2.0-flash",
+        string model = "gemini-2.5-flash",
         CancellationToken ct = default)
     {
         var prompt = BuildPrompt(transcriptText, userPrompt);

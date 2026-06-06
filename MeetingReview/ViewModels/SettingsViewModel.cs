@@ -11,7 +11,7 @@ public partial class SettingsViewModel : ObservableObject
     private static readonly string SettingsFile = Path.Combine(SettingsDir, "settings.json");
 
     [ObservableProperty] private string _apiKey = string.Empty;
-    [ObservableProperty] private string _geminiModel = "gemini-2.0-flash";
+    [ObservableProperty] private string _geminiModel = "gemini-2.5-flash";
 
     public ModelRatesViewModel ModelRates { get; }
     public CostHistoryViewModel CostHistory { get; }

@@ -17,7 +17,7 @@ public partial class SummaryViewModel : ObservableObject
 
     internal string TranscriptText { get; set; } = string.Empty;
     internal string ApiKey { get; set; } = string.Empty;
-    internal string GeminiModel { get; set; } = "gemini-2.0-flash";
+    internal string GeminiModel { get; set; } = "gemini-2.5-flash";
 
     public SummaryViewModel(IGeminiService gemini, IUsageService? usageService = null)
     {
