@@ -85,7 +85,8 @@ public partial class MainViewModel : ObservableObject
     {
         var path = PickFile("MOV files|*.mov|MP4 files|*.mp4|All files|*.*");
         if (path == null) return;
-        VideoPlayer?.LoadMedia(path);
+        try { VideoPlayer?.LoadMedia(path); }
+        catch (Exception ex) { ShowError("Load Video", ex); }
     }
 
     [RelayCommand]
@@ -93,8 +94,12 @@ public partial class MainViewModel : ObservableObject
     {
         var path = PickFile("JSON files|*.json|All files|*.*");
         if (path == null) return;
-        await Transcript.LoadAsync(path, ct);
-        Summary.TranscriptText = BuildTranscriptText();
+        try
+        {
+            await Transcript.LoadAsync(path, ct);
+            Summary.TranscriptText = BuildTranscriptText();
+        }
+        catch (Exception ex) { ShowError("Load Timestamps", ex); }
     }
 
     [RelayCommand]
@@ -102,12 +107,19 @@ public partial class MainViewModel : ObservableObject
     {
         var path = PickFile("Text files|*.txt|All files|*.*");
         if (path == null) return;
-        Summary.TranscriptText = await File.ReadAllTextAsync(path, ct);
+        try { Summary.TranscriptText = await File.ReadAllTextAsync(path, ct); }
+        catch (Exception ex) { ShowError("Load Transcript", ex); }
     }
 
     private string BuildTranscriptText() =>
         string.Join("\n", Transcript.Paragraphs
             .Select(p => string.Join("", p.Words.Select(w => w.Text))));
+
+    private static void ShowError(string operation, Exception ex) =>
+        System.Windows.MessageBox.Show(
+            ex.Message, $"{operation} failed",
+            System.Windows.MessageBoxButton.OK,
+            System.Windows.MessageBoxImage.Error);
 
     private static string? PickFile(string filter)
     {

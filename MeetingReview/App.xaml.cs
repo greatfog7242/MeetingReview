@@ -38,7 +38,9 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _services?.GetService<VideoPlayerViewModel>()?.Dispose();
+        // ServiceProvider.Dispose() disposes all IDisposable singletons including
+        // VideoPlayerViewModel. Do NOT call Dispose() manually here — double-dispose
+        // of the native VLC handle causes AccessViolationException.
         _services?.Dispose();
         base.OnExit(e);
     }

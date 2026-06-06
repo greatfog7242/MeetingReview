@@ -56,8 +56,12 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
         _timer.Start();
     }
 
+    private bool _disposed;
+
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         _timer.Stop();
         MediaPlayer.Stop();
         MediaPlayer.Dispose();
