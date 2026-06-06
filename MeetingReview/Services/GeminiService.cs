@@ -8,8 +8,8 @@ namespace MeetingReview.Services;
 
 public sealed class GeminiService : IGeminiService
 {
-    private const string BaseUrl =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    private const string ApiBase =
+        "https://generativelanguage.googleapis.com/v1beta/models";
 
     private readonly HttpClient _http;
 
@@ -19,12 +19,14 @@ public sealed class GeminiService : IGeminiService
         string transcriptText,
         string userPrompt,
         string apiKey,
+        string model = "gemini-2.0-flash",
         CancellationToken ct = default)
     {
         var prompt = BuildPrompt(transcriptText, userPrompt);
         var requestJson = BuildRequestJson(prompt);
+        var url = $"{ApiBase}/{model}:generateContent?key={apiKey}";
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}?key={apiKey}");
+        using var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
         using var response = await _http.SendAsync(request, ct);

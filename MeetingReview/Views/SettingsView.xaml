@@ -18,6 +18,13 @@
                      FontFamily="Consolas"
                      Margin="0,0,0,4"/>
             <TextBlock Text="Stored in %AppData%\MeetingReview\settings.json"
+                       FontSize="11" Foreground="#888" Margin="0,0,0,16"/>
+
+            <Label Content="Gemini Model" FontWeight="Medium"/>
+            <TextBox Text="{Binding GeminiModel, UpdateSourceTrigger=PropertyChanged}"
+                     FontFamily="Consolas"
+                     Margin="0,0,0,4"/>
+            <TextBlock Text="e.g. gemini-2.0-flash  gemini-2.5-flash  gemini-2.5-pro"
                        FontSize="11" Foreground="#888" Margin="0,0,0,24"/>
 
             <Separator Margin="0,0,0,20"/>

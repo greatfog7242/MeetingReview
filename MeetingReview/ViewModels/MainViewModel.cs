@@ -50,8 +50,11 @@ public partial class MainViewModel : ObservableObject
         {
             if (e.PropertyName == nameof(SettingsViewModel.ApiKey))
                 Summary.ApiKey = Settings.ApiKey;
+            if (e.PropertyName == nameof(SettingsViewModel.GeminiModel))
+                Summary.GeminiModel = Settings.GeminiModel;
         };
         Summary.ApiKey = Settings.ApiKey;
+        Summary.GeminiModel = Settings.GeminiModel;
     }
 
     private void OnVideoTimeChanged(object? sender, long positionMs)
