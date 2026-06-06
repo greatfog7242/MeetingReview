@@ -10,11 +10,12 @@ public partial class App : Application
 {
     private ServiceProvider? _services;
 
-    private void OnStartup(object sender, StartupEventArgs e)
+    private async void OnStartup(object sender, StartupEventArgs e)
     {
         var sc = new ServiceCollection();
 
         sc.AddSingleton<HttpClient>();
+        sc.AddSingleton<IUsageService, UsageService>();
         sc.AddSingleton<ITranscriptParserService, TranscriptParserService>();
         sc.AddSingleton<IGeminiService, GeminiService>();
         sc.AddSingleton<VideoPlayerViewModel>();
@@ -25,8 +26,11 @@ public partial class App : Application
 
         _services = sc.BuildServiceProvider();
 
+        await _services.GetRequiredService<IUsageService>().InitAsync();
+
         var mainVm = _services.GetRequiredService<MainViewModel>();
         mainVm.Settings.Load();
+        await mainVm.Settings.LoadSubViewModelsAsync();
 
         var window = new Views.MainWindow { DataContext = mainVm };
         window.Show();

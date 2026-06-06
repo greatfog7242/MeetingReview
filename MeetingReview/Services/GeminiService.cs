@@ -15,7 +15,7 @@ public sealed class GeminiService : IGeminiService
 
     public GeminiService(HttpClient http) => _http = http;
 
-    public async Task<List<TopicSummary>> GenerateSummaryAsync(
+    public async Task<GeminiCallResult> GenerateSummaryAsync(
         string transcriptText,
         string userPrompt,
         string apiKey,
@@ -31,18 +31,21 @@ public sealed class GeminiService : IGeminiService
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadAsStringAsync(ct);
-        var topicsJson = StripMarkdownFences(ExtractCandidateText(body));
+        var (text, modelVersion, promptTokens, candidateTokens, totalTokens) = ParseResponse(body);
 
+        var topicsJson = StripMarkdownFences(text);
         var dtos = JsonSerializer.Deserialize(topicsJson, AppJsonContext.Default.ListTopicSummaryDto)
                    ?? throw new InvalidDataException("Gemini returned an empty topics list.");
 
-        return dtos.Select(d => new TopicSummary
+        var topics = dtos.Select(d => new TopicSummary
         {
             Title = d.Title,
             DetailedContent = d.DetailedContent,
             StartMs = d.StartMs,
             EndMs = d.EndMs
         }).ToList();
+
+        return new GeminiCallResult(topics, modelVersion, promptTokens, candidateTokens, totalTokens);
     }
 
     private static string BuildPrompt(string transcriptText, string userPrompt) => $"""
@@ -72,16 +75,33 @@ public sealed class GeminiService : IGeminiService
             """;
     }
 
-    private static string ExtractCandidateText(string responseBody)
+    private static (string text, string modelVersion, int promptTokens, int candidateTokens, int totalTokens)
+        ParseResponse(string responseBody)
     {
         using var doc = JsonDocument.Parse(responseBody);
-        return doc.RootElement
-                   .GetProperty("candidates")[0]
-                   .GetProperty("content")
-                   .GetProperty("parts")[0]
-                   .GetProperty("text")
-                   .GetString()
-               ?? throw new InvalidDataException("Gemini response contains no text.");
+        var root = doc.RootElement;
+
+        var text = root
+            .GetProperty("candidates")[0]
+            .GetProperty("content")
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString()
+            ?? throw new InvalidDataException("Gemini response contains no text.");
+
+        var modelVersion = root.TryGetProperty("modelVersion", out var mv)
+            ? (mv.GetString() ?? "unknown")
+            : "unknown";
+
+        int promptTokens = 0, candidateTokens = 0, totalTokens = 0;
+        if (root.TryGetProperty("usageMetadata", out var usage))
+        {
+            if (usage.TryGetProperty("promptTokenCount",     out var p)) promptTokens    = p.GetInt32();
+            if (usage.TryGetProperty("candidatesTokenCount", out var c)) candidateTokens = c.GetInt32();
+            if (usage.TryGetProperty("totalTokenCount",      out var t)) totalTokens     = t.GetInt32();
+        }
+
+        return (text, modelVersion, promptTokens, candidateTokens, totalTokens);
     }
 
     private static string StripMarkdownFences(string text)

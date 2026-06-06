@@ -4,7 +4,7 @@ namespace MeetingReview.Services;
 
 public interface IGeminiService
 {
-    Task<List<TopicSummary>> GenerateSummaryAsync(
+    Task<GeminiCallResult> GenerateSummaryAsync(
         string transcriptText,
         string userPrompt,
         string apiKey,

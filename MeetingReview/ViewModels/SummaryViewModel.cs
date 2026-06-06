@@ -9,6 +9,7 @@ namespace MeetingReview.ViewModels;
 public partial class SummaryViewModel : ObservableObject
 {
     private readonly IGeminiService _gemini;
+    private readonly IUsageService? _usageService;
 
     [ObservableProperty] private ObservableCollection<TopicSummary> _topics = new();
     [ObservableProperty] private bool _isLoading;
@@ -17,7 +18,11 @@ public partial class SummaryViewModel : ObservableObject
     internal string TranscriptText { get; set; } = string.Empty;
     internal string ApiKey { get; set; } = string.Empty;
 
-    public SummaryViewModel(IGeminiService gemini) => _gemini = gemini;
+    public SummaryViewModel(IGeminiService gemini, IUsageService? usageService = null)
+    {
+        _gemini = gemini;
+        _usageService = usageService;
+    }
 
     [RelayCommand]
     private async Task GenerateSummaryAsync(string? userPrompt, CancellationToken ct)
@@ -39,9 +44,26 @@ public partial class SummaryViewModel : ObservableObject
 
         try
         {
-            var topics = await _gemini.GenerateSummaryAsync(
+            var result = await _gemini.GenerateSummaryAsync(
                 TranscriptText, userPrompt ?? string.Empty, ApiKey, ct);
-            Topics = new ObservableCollection<TopicSummary>(topics);
+
+            Topics = new ObservableCollection<TopicSummary>(result.Topics);
+
+            if (_usageService != null)
+            {
+                var cost = _usageService.CalculateCost(
+                    result.ModelVersion, result.PromptTokens, result.CandidateTokens);
+
+                await _usageService.SaveUsageAsync(new ApiUsageRecord
+                {
+                    CalledAt         = DateTime.UtcNow,
+                    ModelVersion     = result.ModelVersion,
+                    PromptTokens     = result.PromptTokens,
+                    CandidateTokens  = result.CandidateTokens,
+                    TotalTokens      = result.TotalTokens,
+                    EstimatedCostUsd = cost
+                }, ct);
+            }
         }
         catch (Exception ex)
         {

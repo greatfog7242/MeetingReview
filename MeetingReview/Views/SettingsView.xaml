@@ -5,23 +5,134 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:MeetingReview.ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=False}"
-             MaxWidth="480">
-    <StackPanel Margin="24" VerticalAlignment="Top">
-        <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
+             d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=False}">
 
-        <Label Content="Gemini API Key" FontWeight="Medium"/>
-        <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
-                 FontFamily="Consolas"
-                 Margin="0,0,0,8"/>
-        <TextBlock Text="Stored in %AppData%\MeetingReview\settings.json"
-                   FontSize="11"
-                   Foreground="#888"
-                   Margin="0,0,0,24"/>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" MaxWidth="680">
 
-        <TextBlock TextWrapping="Wrap" Foreground="#555" FontSize="12">
-            Get a free API key at console.cloud.google.com → Gemini API.
-            The key is saved automatically as you type.
-        </TextBlock>
-    </StackPanel>
+            <!-- ── API Key ──────────────────────────────────────── -->
+            <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
+
+            <Label Content="Gemini API Key" FontWeight="Medium"/>
+            <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
+                     FontFamily="Consolas"
+                     Margin="0,0,0,4"/>
+            <TextBlock Text="Stored in %AppData%\MeetingReview\settings.json"
+                       FontSize="11" Foreground="#888" Margin="0,0,0,24"/>
+
+            <Separator Margin="0,0,0,20"/>
+
+            <!-- ── Pricing Rates ────────────────────────────────── -->
+            <TextBlock Text="Pricing Rates" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock Text="Rates in USD per 1,000,000 tokens. Edit cells directly, then click Save."
+                       FontSize="11" Foreground="#888" Margin="0,0,0,8"/>
+
+            <DataGrid ItemsSource="{Binding ModelRates.Rates}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      SelectionMode="Single"
+                      Margin="0,0,0,8"
+                      MaxHeight="220">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Model Pattern"
+                                        Binding="{Binding ModelPattern, UpdateSourceTrigger=LostFocus}"
+                                        Width="*"/>
+                    <DataGridTextColumn Header="Input $/M"
+                                        Binding="{Binding InputRatePerMillion, StringFormat={}{0:F4}, UpdateSourceTrigger=LostFocus}"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="Output $/M"
+                                        Binding="{Binding OutputRatePerMillion, StringFormat={}{0:F4}, UpdateSourceTrigger=LostFocus}"
+                                        Width="90"/>
+                    <DataGridTemplateColumn Header="" Width="64">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Delete" Padding="4,1"
+                                        Command="{Binding DataContext.ModelRates.DeleteRateCommand,
+                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                        CommandParameter="{Binding}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <Button Content="Add Row"
+                        Command="{Binding ModelRates.AddRateCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Save Changes"
+                        Command="{Binding ModelRates.SaveAllRatesCommand}"/>
+                <TextBlock Text="{Binding ModelRates.StatusMessage}"
+                           VerticalAlignment="Center"
+                           Foreground="#080"
+                           Margin="12,0,0,0"/>
+            </StackPanel>
+
+            <Separator Margin="0,20"/>
+
+            <!-- ── Cost History ─────────────────────────────────── -->
+            <TextBlock Text="Cost History" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <DatePicker SelectedDate="{Binding CostHistory.FromDate}" Margin="0,0,16,0"/>
+                <TextBlock Text="To" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <DatePicker SelectedDate="{Binding CostHistory.ToDate}" Margin="0,0,16,0"/>
+                <Button Content="Load" Command="{Binding CostHistory.LoadCommand}"/>
+            </StackPanel>
+
+            <!-- Error -->
+            <TextBlock Text="{Binding CostHistory.ErrorMessage}"
+                       Foreground="#C00" FontSize="12" Margin="0,0,0,6">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CostHistory.ErrorMessage}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <DataGrid ItemsSource="{Binding CostHistory.Records}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      MaxHeight="320"
+                      Margin="0,0,0,8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Date / Time (UTC)"
+                                        Binding="{Binding CalledAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                        Width="140"/>
+                    <DataGridTextColumn Header="Model"
+                                        Binding="{Binding ModelVersion}"
+                                        Width="*"/>
+                    <DataGridTextColumn Header="Prompt"
+                                        Binding="{Binding PromptTokens, StringFormat=N0}"
+                                        Width="80"/>
+                    <DataGridTextColumn Header="Output"
+                                        Binding="{Binding CandidateTokens, StringFormat=N0}"
+                                        Width="80"/>
+                    <DataGridTextColumn Header="Total"
+                                        Binding="{Binding TotalTokens, StringFormat=N0}"
+                                        Width="80"/>
+                    <DataGridTextColumn Header="Est. Cost (USD)"
+                                        Binding="{Binding EstimatedCostUsd, StringFormat={}{0:F6}}"
+                                        Width="110"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Margin="0,0,0,24" FontSize="13">
+                <Run Text="Total estimated cost: "/>
+                <Run Text="{Binding CostHistory.TotalCostUsd, StringFormat={}{0:F6}}"
+                     FontWeight="SemiBold"/>
+                <Run Text=" USD"/>
+            </TextBlock>
+
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>
