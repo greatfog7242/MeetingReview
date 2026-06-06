@@ -22,10 +22,10 @@
                             ToolTip="Load .mov or .mp4 recording"/>
                     <Separator/>
                     <Button Content="📄  Load Transcript"
-                            Command="{Binding LoadTranscriptAsyncCommand}"
+                            Command="{Binding LoadTranscriptCommand}"
                             ToolTip="Load plain-text transcript (.txt)"/>
                     <Button Content="⏱  Load Timestamps"
-                            Command="{Binding LoadJsonAsyncCommand}"
+                            Command="{Binding LoadJsonCommand}"
                             ToolTip="Load Whisper word-timestamp JSON (.json)"/>
                 </ToolBar>
 
