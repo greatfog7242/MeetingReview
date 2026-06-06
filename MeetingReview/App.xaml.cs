@@ -14,7 +14,7 @@ public partial class App : Application
     {
         var sc = new ServiceCollection();
 
-        sc.AddSingleton<HttpClient>();
+        sc.AddSingleton(new HttpClient { Timeout = TimeSpan.FromMinutes(10) });
         sc.AddSingleton<IUsageService, UsageService>();
         sc.AddSingleton<ITranscriptParserService, TranscriptParserService>();
         sc.AddSingleton<IGeminiService, GeminiService>();
