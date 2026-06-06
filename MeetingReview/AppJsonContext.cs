@@ -7,4 +7,5 @@ namespace MeetingReview;
 [JsonSerializable(typeof(List<WhisperSegmentDto>))]
 [JsonSerializable(typeof(List<WhisperWordDto>))]
 [JsonSerializable(typeof(List<TopicSummaryDto>))]
+[JsonSerializable(typeof(SummarySaveDto))]
 internal partial class AppJsonContext : JsonSerializerContext { }

@@ -11,7 +11,7 @@
         <!-- Prompt + generate button -->
         <StackPanel DockPanel.Dock="Top" Margin="8,8,8,4">
             <Label Content="Summary Prompt" FontWeight="Medium" Padding="0,0,0,2"/>
-            <TextBox x:Name="PromptBox"
+            <TextBox Text="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}"
                      TextWrapping="Wrap"
                      AcceptsReturn="False"
                      Height="52"
@@ -19,7 +19,6 @@
                      Margin="0,0,0,6"/>
             <Button Content="Generate Summary"
                     Command="{Binding GenerateSummaryCommand}"
-                    CommandParameter="{Binding ElementName=PromptBox, Path=Text}"
                     HorizontalAlignment="Stretch"/>
 
             <!-- Error message — visible only when non-null -->

@@ -14,6 +14,9 @@ public partial class MainViewModel : ObservableObject
 
     internal bool SuppressAutoSync { get; private set; }
 
+    private string? _jsonPath;
+    private string? _txtPath;
+
     public MainViewModel(
         VideoPlayerViewModel videoPlayer,
         TranscriptViewModel transcript,
@@ -101,6 +104,9 @@ public partial class MainViewModel : ObservableObject
         {
             await Transcript.LoadAsync(path, ct);
             Summary.TranscriptText = BuildTranscriptText();
+            _jsonPath = path;
+            UpdateSavePath();
+            await Summary.TryLoadSavedAsync(ct);
         }
         catch (Exception ex) { ShowError("Load Timestamps", ex); }
     }
@@ -110,8 +116,23 @@ public partial class MainViewModel : ObservableObject
     {
         var path = PickFile("Text files|*.txt|All files|*.*");
         if (path == null) return;
-        try { Summary.TranscriptText = await File.ReadAllTextAsync(path, ct); }
+        try
+        {
+            Summary.TranscriptText = await File.ReadAllTextAsync(path, ct);
+            _txtPath = path;
+            UpdateSavePath();
+            await Summary.TryLoadSavedAsync(ct);
+        }
         catch (Exception ex) { ShowError("Load Transcript", ex); }
+    }
+
+    private void UpdateSavePath()
+    {
+        var source = _jsonPath ?? _txtPath;
+        Summary.SavePath = source == null
+            ? null
+            : Path.Combine(Path.GetDirectoryName(source)!,
+                           Path.GetFileNameWithoutExtension(source) + ".summary.json");
     }
 
     private string BuildTranscriptText() =>

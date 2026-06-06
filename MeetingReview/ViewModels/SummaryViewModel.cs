@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MeetingReview.Models;
+using MeetingReview.Models.Dtos;
 using MeetingReview.Services;
 
 namespace MeetingReview.ViewModels;
@@ -14,10 +16,12 @@ public partial class SummaryViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<TopicSummary> _topics = new();
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private string _prompt = string.Empty;
 
     internal string TranscriptText { get; set; } = string.Empty;
-    internal string ApiKey { get; set; } = string.Empty;
-    internal string GeminiModel { get; set; } = "gemini-2.5-flash";
+    internal string ApiKey         { get; set; } = string.Empty;
+    internal string GeminiModel    { get; set; } = "gemini-2.5-flash";
+    internal string? SavePath      { get; set; }
 
     public SummaryViewModel(IGeminiService gemini, IUsageService? usageService = null)
     {
@@ -26,7 +30,7 @@ public partial class SummaryViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task GenerateSummaryAsync(string? userPrompt, CancellationToken ct)
+    private async Task GenerateSummaryAsync(CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
         {
@@ -46,7 +50,7 @@ public partial class SummaryViewModel : ObservableObject
         try
         {
             var result = await _gemini.GenerateSummaryAsync(
-                TranscriptText, userPrompt ?? string.Empty, ApiKey, GeminiModel, ct);
+                TranscriptText, Prompt, ApiKey, GeminiModel, ct);
 
             Topics = new ObservableCollection<TopicSummary>(result.Topics);
 
@@ -65,6 +69,8 @@ public partial class SummaryViewModel : ObservableObject
                     EstimatedCostUsd = cost
                 }, ct);
             }
+
+            _ = SaveAsync(ct);
         }
         catch (Exception ex)
         {
@@ -74,6 +80,43 @@ public partial class SummaryViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    internal async Task TryLoadSavedAsync(CancellationToken ct = default)
+    {
+        if (SavePath == null || !File.Exists(SavePath)) return;
+        try
+        {
+            var json = await File.ReadAllTextAsync(SavePath, ct);
+            var dto  = JsonSerializer.Deserialize(json, AppJsonContext.Default.SummarySaveDto);
+            if (dto == null) return;
+
+            Prompt = dto.Prompt;
+            Topics = new ObservableCollection<TopicSummary>(dto.Topics.Select(d => new TopicSummary
+            {
+                Title           = d.Title,
+                DetailedContent = d.DetailedContent,
+                StartMs         = d.StartMs,
+                EndMs           = d.EndMs
+            }));
+        }
+        catch { /* silently ignore corrupt / incompatible save files */ }
+    }
+
+    private async Task SaveAsync(CancellationToken ct)
+    {
+        if (SavePath == null) return;
+        try
+        {
+            var dto = new SummarySaveDto(
+                Prompt,
+                DateTime.UtcNow,
+                Topics.Select(t => new TopicSummaryDto(t.Title, t.DetailedContent, t.StartMs, t.EndMs)).ToList()
+            );
+            var json = JsonSerializer.Serialize(dto, AppJsonContext.Default.SummarySaveDto);
+            await File.WriteAllTextAsync(SavePath, json, ct);
+        }
+        catch { }
     }
 
     public void HighlightTopicAt(long positionMs)
