@@ -26,13 +26,7 @@ public sealed class GeminiService : IGeminiService
         var requestJson = BuildRequestJson(prompt);
         var url = $"{ApiBase}/{model}:generateContent?key={apiKey}";
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
-
-        using var response = await _http.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
-
-        var body = await response.Content.ReadAsStringAsync(ct);
+        var body = await SendWithRetryAsync(url, requestJson, ct);
         var (text, modelVersion, promptTokens, candidateTokens, totalTokens) = ParseResponse(body);
 
         var topicsJson = StripMarkdownFences(text);
@@ -48,6 +42,58 @@ public sealed class GeminiService : IGeminiService
         }).ToList();
 
         return new GeminiCallResult(topics, modelVersion, promptTokens, candidateTokens, totalTokens);
+    }
+
+    private async Task<string> SendWithRetryAsync(string url, string requestJson, CancellationToken ct)
+    {
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+            using var response = await _http.SendAsync(request, ct);
+
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsStringAsync(ct);
+
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+
+            // On 429 rate-limit, wait for Retry-After (or 30 s) then try once more
+            if ((int)response.StatusCode == 429 && attempt == 0)
+            {
+                int delaySec = 30;
+                if (response.Headers.TryGetValues("Retry-After", out var vals) &&
+                    int.TryParse(vals.FirstOrDefault(), out var ra))
+                    delaySec = ra;
+
+                await Task.Delay(TimeSpan.FromSeconds(delaySec), ct);
+                continue;
+            }
+
+            // Extract the human-readable message from the Gemini error JSON if present
+            string detail = TryExtractGeminiError(errorBody)
+                            ?? $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
+
+            throw new HttpRequestException(detail, null, response.StatusCode);
+        }
+
+        throw new HttpRequestException("Gemini rate limit — still busy after retry. Wait a minute and try again.");
+    }
+
+    private static string? TryExtractGeminiError(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var err))
+            {
+                var msg  = err.TryGetProperty("message", out var m) ? m.GetString() : null;
+                var code = err.TryGetProperty("status",  out var s) ? s.GetString() : null;
+                if (msg != null) return code != null ? $"{code}: {msg}" : msg;
+            }
+        }
+        catch { }
+        return null;
     }
 
     private static string BuildPrompt(string transcriptText, string userPrompt) => $"""
