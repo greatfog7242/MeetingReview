@@ -124,8 +124,28 @@ public partial class MainViewModel : ObservableObject
     private static string? PickFile(string filter)
     {
         var dlg = new Microsoft.Win32.OpenFileDialog { Filter = filter };
-        return dlg.ShowDialog(System.Windows.Application.Current.MainWindow) == true
-            ? dlg.FileName
-            : null;
+
+        // VLC embeds a Win32 child window on top of the WPF surface. If we pass
+        // MainWindow as the dialog owner, ShowDialog() disables MainWindow but not
+        // VLC's overlay — the dialog opens beneath the video and is invisible.
+        // Using a tiny off-screen topmost window as owner keeps MainWindow enabled
+        // (VLC renders normally) while the dialog still floats above everything.
+        var host = new System.Windows.Window
+        {
+            Width = 1, Height = 1,
+            Left = -10000, Top = -10000,
+            WindowStyle = System.Windows.WindowStyle.None,
+            ShowInTaskbar = false,
+            Topmost = true
+        };
+        host.Show();
+        try
+        {
+            return dlg.ShowDialog(host) == true ? dlg.FileName : null;
+        }
+        finally
+        {
+            host.Close();
+        }
     }
 }

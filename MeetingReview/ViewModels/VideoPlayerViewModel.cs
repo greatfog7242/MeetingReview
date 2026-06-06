@@ -62,8 +62,13 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
     {
         if (_disposed) return;
         _disposed = true;
+        _timer.Tick -= OnTimerTick;
         _timer.Stop();
-        MediaPlayer.Stop();
+        // Set Media = null before disposing to release the native VLC media handle
+        // cleanly. Do NOT call MediaPlayer.Stop() explicitly — it AVEs if the
+        // Win32 rendering HWND is in a transitional state during window close.
+        // libvlc_media_player_release (called by Dispose) handles the stop internally.
+        MediaPlayer.Media = null;
         MediaPlayer.Dispose();
         _libVlc.Dispose();
     }
