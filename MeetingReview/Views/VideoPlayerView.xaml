@@ -1,0 +1,66 @@
+<UserControl x:Class="MeetingReview.Views.VideoPlayerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:b="clr-namespace:MeetingReview.Behaviors"
+             xmlns:conv="clr-namespace:MeetingReview.Converters"
+             xmlns:vm="clr-namespace:MeetingReview.ViewModels"
+             xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:VideoPlayerViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <conv:MillisecondsToTimeConverter x:Key="MsToTime"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Video surface -->
+        <vlc:VideoView Grid.Row="0"
+                       MediaPlayer="{Binding MediaPlayer}"
+                       Background="Black"/>
+
+        <!-- Transport controls -->
+        <Grid Grid.Row="1" Margin="8,6,8,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Seek slider — only seeks on thumb drag release via behavior -->
+            <Slider Grid.Row="0"
+                    Minimum="0"
+                    Maximum="{Binding DurationMs}"
+                    Value="{Binding CurrentPositionMs, Mode=OneWay}"
+                    Margin="0,0,0,4">
+                <i:Interaction.Behaviors>
+                    <b:SeekSliderBehavior SeekCommand="{Binding SeekCommand}"/>
+                </i:Interaction.Behaviors>
+            </Slider>
+
+            <Grid Grid.Row="1">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="▶  Play"
+                            Command="{Binding PlayCommand}"
+                            MinWidth="72" Margin="4,0"/>
+                    <Button Content="⏸  Pause"
+                            Command="{Binding PauseCommand}"
+                            MinWidth="72" Margin="4,0"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock FontFamily="Consolas" FontSize="12" VerticalAlignment="Center">
+                        <Run Text="{Binding CurrentPositionMs, Converter={StaticResource MsToTime}, Mode=OneWay}"/>
+                        <Run Text=" / "/>
+                        <Run Text="{Binding DurationMs, Converter={StaticResource MsToTime}, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

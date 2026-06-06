@@ -1,0 +1,69 @@
+<UserControl x:Class="MeetingReview.Views.TranscriptView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:b="clr-namespace:MeetingReview.Behaviors"
+             xmlns:vm="clr-namespace:MeetingReview.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:TranscriptViewModel, IsDesignTimeCreatable=False}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <i:Interaction.Behaviors>
+            <b:ScrollToActiveWordBehavior Transcript="{Binding}"/>
+        </i:Interaction.Behaviors>
+
+        <!-- Paragraphs — virtualization disabled so BringIntoView can find word elements -->
+        <ItemsControl ItemsSource="{Binding Paragraphs}"
+                      Padding="12"
+                      VirtualizingPanel.IsVirtualizing="False">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <!-- Words in a paragraph rendered as a flowing WrapPanel -->
+                    <ItemsControl ItemsSource="{Binding Words}"
+                                  Margin="0,0,0,14"
+                                  VirtualizingPanel.IsVirtualizing="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Each word: clickable, highlighted when IsActive -->
+                                <TextBlock Text="{Binding Text}"
+                                           Background="Transparent"
+                                           Cursor="Hand"
+                                           Padding="1,0,1,2"
+                                           FontSize="14"
+                                           LineHeight="22">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="MouseLeftButtonUp">
+                                            <i:InvokeCommandAction
+                                                Command="{Binding DataContext.SelectWordCommand,
+                                                    RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                CommandParameter="{Binding}"
+                                                PassEventArgsToCommand="False"/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="Background" Value="#FFE082"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>
