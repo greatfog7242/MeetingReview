@@ -22,6 +22,22 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Margin="0,0,0,14">
+                        <!-- Speaker label — hidden when speaker is empty string -->
+                        <TextBlock FontSize="11" FontWeight="SemiBold"
+                                   Foreground="#888" Margin="0,0,0,2"
+                                   Text="{Binding Speaker, StringFormat='Speaker {0}'}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Speaker}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
                         <!-- Word-level view: only when the JSON included word timestamps -->
                         <ItemsControl ItemsSource="{Binding Words}"
                                       VirtualizingPanel.IsVirtualizing="False">
