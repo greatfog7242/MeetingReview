@@ -21,47 +21,75 @@
                       VirtualizingPanel.IsVirtualizing="False">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <!-- Words in a paragraph rendered as a flowing WrapPanel -->
-                    <ItemsControl ItemsSource="{Binding Words}"
-                                  Margin="0,0,0,14"
-                                  VirtualizingPanel.IsVirtualizing="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <!-- Each word: clickable, highlighted when IsActive -->
-                                <TextBlock Text="{Binding Text}"
-                                           Background="Transparent"
-                                           Cursor="Hand"
-                                           Padding="1,0,1,2"
-                                           FontSize="14"
-                                           LineHeight="22">
-                                    <i:Interaction.Triggers>
-                                        <i:EventTrigger EventName="MouseLeftButtonUp">
-                                            <i:InvokeCommandAction
-                                                Command="{Binding DataContext.SelectWordCommand,
-                                                    RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                CommandParameter="{Binding}"
-                                                PassEventArgsToCommand="False"/>
-                                        </i:EventTrigger>
-                                    </i:Interaction.Triggers>
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                    <Setter Property="Background" Value="#FFE082"/>
-                                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <StackPanel Margin="0,0,0,14">
+                        <!-- Word-level view: only when the JSON included word timestamps -->
+                        <ItemsControl ItemsSource="{Binding Words}"
+                                      VirtualizingPanel.IsVirtualizing="False">
+                            <ItemsControl.Style>
+                                <Style TargetType="ItemsControl">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Words.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ItemsControl.Style>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- Each word: clickable, highlighted when IsActive -->
+                                    <TextBlock Text="{Binding Text}"
+                                               Background="Transparent"
+                                               Cursor="Hand"
+                                               Padding="1,0,1,2"
+                                               FontSize="14"
+                                               LineHeight="22">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="MouseLeftButtonUp">
+                                                <i:InvokeCommandAction
+                                                    Command="{Binding DataContext.SelectWordCommand,
+                                                        RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                    CommandParameter="{Binding}"
+                                                    PassEventArgsToCommand="False"/>
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="Background" Value="#FFE082"/>
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Segment-text fallback: when the JSON has no word timestamps -->
+                        <TextBlock Text="{Binding Text}"
+                                   FontSize="14"
+                                   TextWrapping="Wrap"
+                                   Padding="1,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Words.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

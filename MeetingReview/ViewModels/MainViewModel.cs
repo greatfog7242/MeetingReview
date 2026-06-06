@@ -113,7 +113,9 @@ public partial class MainViewModel : ObservableObject
 
     private string BuildTranscriptText() =>
         string.Join("\n", Transcript.Paragraphs
-            .Select(p => string.Join("", p.Words.Select(w => w.Text))));
+            .Select(p => p.Words.Count > 0
+                ? string.Join("", p.Words.Select(w => w.Text))
+                : p.Text));
 
     private static void ShowError(string operation, Exception ex) =>
         System.Windows.MessageBox.Show(
