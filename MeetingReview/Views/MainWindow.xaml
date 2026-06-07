@@ -22,12 +22,9 @@
                             Command="{Binding LoadVideoCommand}"
                             ToolTip="Load .mov or .mp4 recording"/>
                     <Separator/>
-                    <Button Content="📄  Load Transcript"
-                            Command="{Binding LoadTranscriptCommand}"
-                            ToolTip="Load plain-text transcript (.txt)"/>
-                    <Button Content="⏱  Load Timestamps"
-                            Command="{Binding LoadJsonCommand}"
-                            ToolTip="Load Whisper word-timestamp JSON (.json)"/>
+                    <Button Content="📂  Load Recording"
+                            Command="{Binding LoadRecordingCommand}"
+                            ToolTip="Select a folder containing transcript.txt and transcript.json"/>
                 </ToolBar>
 
                 <!-- Three-column layout: Video | Transcript | Summary -->

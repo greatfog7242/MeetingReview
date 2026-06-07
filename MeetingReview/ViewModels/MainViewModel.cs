@@ -15,7 +15,6 @@ public partial class MainViewModel : ObservableObject
     internal bool SuppressAutoSync { get; private set; }
 
     private string? _jsonPath;
-    private string? _txtPath;
 
     public MainViewModel(
         VideoPlayerViewModel videoPlayer,
@@ -96,43 +95,42 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoadJsonAsync(CancellationToken ct)
+    private async Task LoadRecordingAsync(CancellationToken ct)
     {
-        var path = PickFile("JSON files|*.json|All files|*.*");
-        if (path == null) return;
-        try
-        {
-            await Transcript.LoadAsync(path, ct);
-            Summary.TranscriptText = BuildTranscriptText();
-            _jsonPath = path;
-            UpdateSavePath();
-            await Summary.TryLoadSavedAsync(ct);
-        }
-        catch (Exception ex) { ShowError("Load Timestamps", ex); }
-    }
+        var folder = PickFolder();
+        if (folder == null) return;
 
-    [RelayCommand]
-    private async Task LoadTranscriptAsync(CancellationToken ct)
-    {
-        var path = PickFile("Text files|*.txt|All files|*.*");
-        if (path == null) return;
+        var txtPath  = Path.Combine(folder, "transcript.txt");
+        var jsonPath = Path.Combine(folder, "transcript.json");
+
+        var missing = new[] { txtPath, jsonPath }.Where(p => !File.Exists(p)).ToList();
+        if (missing.Count > 0)
+        {
+            System.Windows.MessageBox.Show(
+                $"Missing required file(s) in folder:\n{string.Join("\n", missing.Select(Path.GetFileName))}",
+                "Load Recording failed",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+            return;
+        }
+
         try
         {
-            Summary.TranscriptText = await File.ReadAllTextAsync(path, ct);
-            _txtPath = path;
+            await Transcript.LoadAsync(jsonPath, ct);
+            Summary.TranscriptText = await File.ReadAllTextAsync(txtPath, ct);
+            _jsonPath = jsonPath;
             UpdateSavePath();
             await Summary.TryLoadSavedAsync(ct);
         }
-        catch (Exception ex) { ShowError("Load Transcript", ex); }
+        catch (Exception ex) { ShowError("Load Recording", ex); }
     }
 
     private void UpdateSavePath()
     {
-        var source = _jsonPath ?? _txtPath;
-        Summary.SavePath = source == null
+        Summary.SavePath = _jsonPath == null
             ? null
-            : Path.Combine(Path.GetDirectoryName(source)!,
-                           Path.GetFileNameWithoutExtension(source) + ".summary.json");
+            : Path.Combine(Path.GetDirectoryName(_jsonPath)!,
+                           Path.GetFileNameWithoutExtension(_jsonPath) + ".summary.json");
     }
 
     private string BuildTranscriptText() =>
@@ -168,6 +166,28 @@ public partial class MainViewModel : ObservableObject
         try
         {
             return dlg.ShowDialog(host) == true ? dlg.FileName : null;
+        }
+        finally
+        {
+            host.Close();
+        }
+    }
+
+    private static string? PickFolder()
+    {
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Select recording folder" };
+        var host = new System.Windows.Window
+        {
+            Width = 1, Height = 1,
+            Left = -10000, Top = -10000,
+            WindowStyle = System.Windows.WindowStyle.None,
+            ShowInTaskbar = false,
+            Topmost = true
+        };
+        host.Show();
+        try
+        {
+            return dlg.ShowDialog(host) == true ? dlg.FolderName : null;
         }
         finally
         {
