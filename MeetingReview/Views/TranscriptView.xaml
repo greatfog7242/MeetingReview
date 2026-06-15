@@ -8,6 +8,19 @@
              xmlns:vm="clr-namespace:MeetingReview.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:TranscriptViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top"
+                Padding="8,6"
+                BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
+                Visibility="{Binding HasParagraphs, Converter={StaticResource BoolToVis}}">
+            <Button Content="Export Captions (.srt)"
+                    Command="{Binding ExportSrtCommand}"
+                    HorizontalAlignment="Left"/>
+        </Border>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
@@ -140,4 +153,5 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
     </ScrollViewer>
+    </DockPanel>
 </UserControl>

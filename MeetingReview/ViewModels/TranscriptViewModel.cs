@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,6 +19,10 @@ public partial class TranscriptViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<ParagraphViewModel> _paragraphs = new();
     [ObservableProperty] private WordViewModel? _activeWord;
     [ObservableProperty] private int _activeParagraphIndex = -1;
+    [ObservableProperty] private bool _hasParagraphs;
+
+    partial void OnParagraphsChanged(ObservableCollection<ParagraphViewModel> value)
+        => HasParagraphs = value.Count > 0;
 
     public event EventHandler<long>? NavigationRequested;
     public event EventHandler<string>? TranscriptSaved;
@@ -143,5 +148,43 @@ public partial class TranscriptViewModel : ObservableObject
     {
         if (word == null) return;
         NavigationRequested?.Invoke(this, word.StartMs);
+    }
+
+    [RelayCommand]
+    private void ExportSrt()
+    {
+        if (Paragraphs.Count == 0) return;
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "SRT subtitle file|*.srt",
+            FileName = "transcript.srt",
+            InitialDirectory = _txtPath != null ? Path.GetDirectoryName(_txtPath) : null
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        var sb = new StringBuilder();
+        int index = 1;
+        foreach (var para in Paragraphs)
+        {
+            var text = para.Words.Count > 0
+                ? string.Join(" ", para.Words.Select(w => w.Text.Trim())).Trim()
+                : para.Text.Trim();
+            if (string.IsNullOrWhiteSpace(text)) continue;
+
+            sb.AppendLine(index.ToString());
+            sb.AppendLine($"{FormatSrtTime(para.StartMs)} --> {FormatSrtTime(para.EndMs)}");
+            sb.AppendLine(text);
+            sb.AppendLine();
+            index++;
+        }
+
+        File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+    }
+
+    private static string FormatSrtTime(long ms)
+    {
+        var ts = TimeSpan.FromMilliseconds(ms);
+        return $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2},{ts.Milliseconds:D3}";
     }
 }
