@@ -20,7 +20,9 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
 
     public VideoPlayerViewModel()
     {
-        Core.Initialize();
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath)!;
+        var arch = Environment.Is64BitProcess ? "win-x64" : "win-x86";
+        Core.Initialize(Path.Combine(exeDir, "libvlc", arch));
         _libVlc = new LibVLC();
         MediaPlayer = new MediaPlayer(_libVlc);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
