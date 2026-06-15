@@ -47,6 +47,13 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
     private void Pause() => MediaPlayer.Pause();
 
     [RelayCommand]
+    private void TogglePlayPause()
+    {
+        if (IsPlaying) MediaPlayer.Pause();
+        else MediaPlayer.Play();
+    }
+
+    [RelayCommand]
     public void Seek(long positionMs) => MediaPlayer.Time = positionMs;
 
     public void LoadMedia(string filePath)

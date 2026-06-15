@@ -45,12 +45,18 @@
 
             <Grid Grid.Row="1">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="▶  Play"
-                            Command="{Binding PlayCommand}"
-                            MinWidth="72" Margin="4,0"/>
-                    <Button Content="⏸  Pause"
-                            Command="{Binding PauseCommand}"
-                            MinWidth="72" Margin="4,0"/>
+                    <Button Command="{Binding TogglePlayPauseCommand}" MinWidth="72" Margin="4,0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Content" Value="▶  Play"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                        <Setter Property="Content" Value="⏸  Pause"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
