@@ -17,6 +17,10 @@ public partial class SummaryViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string? _errorMessage;
     [ObservableProperty] private string _prompt = string.Empty;
+    [ObservableProperty] private bool _hasTopics;
+
+    partial void OnTopicsChanged(ObservableCollection<TopicSummary> value)
+        => HasTopics = value.Count > 0;
 
     internal string TranscriptText { get; set; } = string.Empty;
     internal string ApiKey         { get; set; } = string.Empty;
@@ -117,6 +121,32 @@ public partial class SummaryViewModel : ObservableObject
             await File.WriteAllTextAsync(SavePath, json, ct);
         }
         catch { }
+    }
+
+    [RelayCommand]
+    private void ExportMarkdown()
+    {
+        if (Topics.Count == 0) return;
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Export Summary as Markdown",
+            Filter = "Markdown files|*.md|All files|*.*",
+            FileName = "summary.md"
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# Meeting Summary");
+        foreach (var topic in Topics)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## {topic.Title}");
+            sb.AppendLine();
+            sb.AppendLine(topic.DetailedContent);
+        }
+
+        File.WriteAllText(dlg.FileName, sb.ToString());
     }
 
     public void HighlightTopicAt(long positionMs)
