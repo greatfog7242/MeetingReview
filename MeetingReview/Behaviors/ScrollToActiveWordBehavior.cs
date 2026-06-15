@@ -35,7 +35,35 @@ public class ScrollToActiveWordBehavior : Behavior<FrameworkElement>
         // Defer until after layout so the element is in the visual tree.
         AssociatedObject.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
         {
-            FindElement(AssociatedObject, target)?.BringIntoView();
+            var element = FindElement(AssociatedObject, target);
+            if (element == null) return;
+
+            if (AssociatedObject is not System.Windows.Controls.ScrollViewer sv)
+            {
+                element.BringIntoView();
+                return;
+            }
+
+            try
+            {
+                // elementTop: Y position of the word relative to the visible viewport top.
+                // Negative  → word is above the viewport.
+                // > viewport → word is below the viewport.
+                var elementTop = element.TransformToAncestor(sv).Transform(default).Y;
+                var viewport   = sv.ViewportHeight;
+
+                // Only scroll when the word enters the bottom third or leaves the viewport.
+                // Target position: 1/3 from the top of the viewport.
+                if (elementTop > viewport * 2.0 / 3.0 || elementTop < 0)
+                {
+                    var targetOffset = sv.VerticalOffset + elementTop - viewport / 3.0;
+                    sv.ScrollToVerticalOffset(Math.Max(0, targetOffset));
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                element.BringIntoView();
+            }
         });
     }
 
