@@ -54,6 +54,29 @@
                            IsHitTestVisible="False"/>
             </Canvas>
 
+            <!-- Subtitle overlay -->
+            <TextBlock Text="{Binding CurrentSubtitle}"
+                       HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                       Margin="24,0,24,18"
+                       FontSize="16" FontWeight="SemiBold"
+                       Foreground="White"
+                       TextWrapping="Wrap" TextAlignment="Center"
+                       IsHitTestVisible="False">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="6" ShadowDepth="1" Opacity="0.95"/>
+                </TextBlock.Effect>
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentSubtitle}" Value="">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
             <!-- Zoom mode hint -->
             <TextBlock Text="Drag to select zoom region  •  Esc to cancel"
                        Foreground="White" Background="#AA000000"

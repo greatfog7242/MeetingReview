@@ -14,6 +14,7 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
     [ObservableProperty] private bool _isZoomMode;
     [ObservableProperty] private bool _isZoomed;
     [ObservableProperty] private double _volume = 1.0;
+    [ObservableProperty] private string _currentSubtitle = "";
 
     public event EventHandler<long>? TimeChanged;
     public event EventHandler? ZoomResetRequested;
@@ -22,6 +23,7 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
     private readonly DispatcherTimer _timer;
     private bool _isWaitingForLoad;
     private bool _disposed;
+    private List<SrtEntry> _subtitles = new();
 
     public VideoPlayerViewModel()
     {
@@ -49,6 +51,13 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
         var dur = _mediaElement.NaturalDuration;
         if (dur.HasTimeSpan)
             DurationMs = (long)dur.TimeSpan.TotalMilliseconds;
+        UpdateSubtitle(CurrentPositionMs);
+    }
+
+    private void UpdateSubtitle(long ms)
+    {
+        var entry = _subtitles.FirstOrDefault(e => ms >= e.StartMs && ms <= e.EndMs);
+        CurrentSubtitle = entry?.Text ?? "";
     }
 
     private void OnMediaOpened(object? sender, RoutedEventArgs e)
@@ -110,10 +119,59 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
         IsPlaying = false;
         IsZoomed = false;
         IsZoomMode = false;
+        CurrentSubtitle = "";
+        _subtitles.Clear();
         ZoomResetRequested?.Invoke(this, EventArgs.Empty);
         _mediaElement.Source = new Uri(filePath);
         _mediaElement.Play();
         _isWaitingForLoad = true;
+    }
+
+    public void LoadSubtitles(string srtPath)
+    {
+        _subtitles = ParseSrt(srtPath);
+    }
+
+    private static List<SrtEntry> ParseSrt(string path)
+    {
+        var entries = new List<SrtEntry>();
+        var lines = File.ReadAllLines(path);
+        int i = 0;
+        while (i < lines.Length)
+        {
+            // Skip blank lines and non-index lines
+            if (!int.TryParse(lines[i].Trim(), out _)) { i++; continue; }
+            i++;
+            if (i >= lines.Length) break;
+
+            // Timestamp: 00:00:01,000 --> 00:00:04,000
+            var parts = lines[i++].Trim().Split(" --> ");
+            if (parts.Length != 2) continue;
+            var startMs = ParseSrtTime(parts[0]);
+            var endMs   = ParseSrtTime(parts[1]);
+
+            // Collect text until blank line
+            var text = new System.Text.StringBuilder();
+            while (i < lines.Length && !string.IsNullOrWhiteSpace(lines[i]))
+            {
+                if (text.Length > 0) text.Append('\n');
+                text.Append(lines[i++]);
+            }
+            i++; // skip blank separator
+
+            if (startMs >= 0 && endMs >= 0 && text.Length > 0)
+                entries.Add(new SrtEntry(startMs, endMs, text.ToString()));
+        }
+        return entries;
+    }
+
+    private static long ParseSrtTime(string s)
+    {
+        // HH:MM:SS,mmm
+        if (TimeSpan.TryParseExact(s.Trim().Replace(',', '.'),
+                @"hh\:mm\:ss\.fff", null, out var ts))
+            return (long)ts.TotalMilliseconds;
+        return -1;
     }
 
     [RelayCommand]
@@ -141,3 +199,5 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
         _timer.Stop();
     }
 }
+
+internal record SrtEntry(long StartMs, long EndMs, string Text);

@@ -26,6 +26,7 @@ public partial class TranscriptViewModel : ObservableObject
 
     public event EventHandler<long>? NavigationRequested;
     public event EventHandler<string>? TranscriptSaved;
+    public event EventHandler<string>? SubtitleExported;
 
     public TranscriptViewModel(ITranscriptParserService parser) => _parser = parser;
 
@@ -180,6 +181,7 @@ public partial class TranscriptViewModel : ObservableObject
         }
 
         File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+        SubtitleExported?.Invoke(this, dlg.FileName);
     }
 
     private static string FormatSrtTime(long ms)

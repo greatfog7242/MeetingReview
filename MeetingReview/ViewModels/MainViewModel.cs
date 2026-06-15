@@ -49,6 +49,7 @@ public partial class MainViewModel : ObservableObject
         _videoPlayerEvents.TimeChanged += OnVideoTimeChanged;
         Transcript.NavigationRequested += OnTranscriptNavigationRequested;
         Transcript.TranscriptSaved += (_, text) => Summary.TranscriptText = text;
+        Transcript.SubtitleExported += (_, path) => VideoPlayer?.LoadSubtitles(path);
         Settings.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SettingsViewModel.ApiKey))
@@ -122,6 +123,10 @@ public partial class MainViewModel : ObservableObject
             _jsonPath = jsonPath;
             UpdateSavePath();
             await Summary.TryLoadSavedAsync(ct);
+
+            var srtPath = Path.Combine(folder, "transcript.srt");
+            if (File.Exists(srtPath))
+                VideoPlayer?.LoadSubtitles(srtPath);
         }
         catch (Exception ex) { ShowError("Load Recording", ex); }
     }
