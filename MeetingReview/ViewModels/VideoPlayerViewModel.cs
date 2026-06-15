@@ -13,6 +13,7 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
     [ObservableProperty] private long _durationMs;
     [ObservableProperty] private bool _isZoomMode;
     [ObservableProperty] private bool _isZoomed;
+    [ObservableProperty] private double _volume = 1.0;
 
     public event EventHandler<long>? TimeChanged;
     public event EventHandler? ZoomResetRequested;
@@ -31,12 +32,14 @@ public partial class VideoPlayerViewModel : ObservableObject, IVideoPlayerEvents
     public void Initialize(MediaElement mediaElement)
     {
         _mediaElement = mediaElement;
+        _mediaElement.Volume = Volume;
         _mediaElement.MediaOpened += OnMediaOpened;
         _mediaElement.MediaFailed += OnMediaFailed;
         _mediaElement.MediaEnded  += OnMediaEnded;
     }
 
     partial void OnCurrentPositionMsChanged(long value) => TimeChanged?.Invoke(this, value);
+    partial void OnVolumeChanged(double value) { if (_mediaElement != null) _mediaElement.Volume = value; }
 
     private void OnTimerTick(object? sender, EventArgs e)
     {

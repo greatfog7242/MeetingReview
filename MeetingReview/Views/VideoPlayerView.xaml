@@ -82,6 +82,14 @@
             </Slider>
 
             <Grid Grid.Row="1">
+                <!-- Volume (left) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock Text="🔊" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <Slider Minimum="0" Maximum="1"
+                            Value="{Binding Volume}"
+                            Width="80" VerticalAlignment="Center"/>
+                </StackPanel>
+
                 <!-- Play/Pause (center) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button Command="{Binding TogglePlayPauseCommand}" MinWidth="72" Margin="4,0">
