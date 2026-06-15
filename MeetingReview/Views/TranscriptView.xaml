@@ -58,33 +58,67 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <!-- Each word: clickable, highlighted when IsActive -->
-                                    <TextBlock Text="{Binding Text}"
-                                               Background="Transparent"
-                                               Cursor="Hand"
-                                               Padding="1,0,1,2"
-                                               FontSize="14"
-                                               LineHeight="22">
-                                        <i:Interaction.Triggers>
-                                            <i:EventTrigger EventName="MouseLeftButtonUp">
-                                                <i:InvokeCommandAction
-                                                    Command="{Binding DataContext.SelectWordCommand,
-                                                        RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                    CommandParameter="{Binding}"
-                                                    PassEventArgsToCommand="False"/>
-                                            </i:EventTrigger>
-                                        </i:Interaction.Triggers>
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                        <Setter Property="Background" Value="#FFE082"/>
-                                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                    <!-- Grid overlays TextBox on TextBlock so word width is preserved during edit -->
+                                    <Grid>
+                                        <!-- Read mode: clickable TextBlock; Hidden (not Collapsed) during edit to keep width -->
+                                        <TextBlock Text="{Binding Text}"
+                                                   Cursor="Hand"
+                                                   Padding="1,0,1,2"
+                                                   FontSize="14"
+                                                   LineHeight="22">
+                                            <i:Interaction.Triggers>
+                                                <i:EventTrigger EventName="MouseDoubleClick">
+                                                    <i:InvokeCommandAction
+                                                        Command="{Binding BeginEditCommand}"
+                                                        PassEventArgsToCommand="False"/>
+                                                </i:EventTrigger>
+                                                <i:EventTrigger EventName="MouseLeftButtonUp">
+                                                    <i:InvokeCommandAction
+                                                        Command="{Binding DataContext.SelectWordCommand,
+                                                            RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                        CommandParameter="{Binding}"
+                                                        PassEventArgsToCommand="False"/>
+                                                </i:EventTrigger>
+                                            </i:Interaction.Triggers>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Background" Value="#FFE082"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                            <Setter Property="Visibility" Value="Hidden"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <!-- Edit mode: inline TextBox overlaid on the hidden TextBlock -->
+                                        <TextBox Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontSize="14"
+                                                 Padding="1,0,1,2"
+                                                 BorderThickness="0,0,0,1"
+                                                 BorderBrush="#BDBDBD"
+                                                 Background="White"
+                                                 IsVisibleChanged="WordTextBox_IsVisibleChanged"
+                                                 KeyDown="WordTextBox_KeyDown"
+                                                 LostFocus="WordTextBox_LostFocus">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

@@ -1,12 +1,13 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using MeetingReview.Models;
 
 namespace MeetingReview.ViewModels;
 
-public class ParagraphViewModel
+public partial class ParagraphViewModel : ObservableObject
 {
     internal long StartMs { get; }
     internal long EndMs { get; }
-    public string Text { get; }
+    [ObservableProperty] private string _text;
     public string Speaker { get; }
     public IReadOnlyList<WordViewModel> Words { get; }
 
@@ -14,7 +15,7 @@ public class ParagraphViewModel
     {
         StartMs = segment.StartMs;
         EndMs = segment.EndMs;
-        Text = segment.Text;
+        _text = segment.Text;
         Speaker = segment.Speaker;
         Words = segment.Words.Select(w => new WordViewModel(w)).ToList();
     }

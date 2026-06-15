@@ -48,6 +48,7 @@ public partial class MainViewModel : ObservableObject
     {
         _videoPlayerEvents.TimeChanged += OnVideoTimeChanged;
         Transcript.NavigationRequested += OnTranscriptNavigationRequested;
+        Transcript.TranscriptSaved += (_, text) => Summary.TranscriptText = text;
         Settings.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SettingsViewModel.ApiKey))
@@ -116,7 +117,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            await Transcript.LoadAsync(jsonPath, ct);
+            await Transcript.LoadAsync(jsonPath, txtPath, ct);
             Summary.TranscriptText = await File.ReadAllTextAsync(txtPath, ct);
             _jsonPath = jsonPath;
             UpdateSavePath();
