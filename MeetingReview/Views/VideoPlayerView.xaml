@@ -7,10 +7,12 @@
              xmlns:b="clr-namespace:MeetingReview.Behaviors"
              xmlns:conv="clr-namespace:MeetingReview.Converters"
              xmlns:vm="clr-namespace:MeetingReview.ViewModels"
-             xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
              mc:Ignorable="d"
+             Focusable="True"
+             KeyDown="OnKeyDown"
              d:DataContext="{d:DesignInstance Type=vm:VideoPlayerViewModel, IsDesignTimeCreatable=False}">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:MillisecondsToTimeConverter x:Key="MsToTime"/>
     </UserControl.Resources>
 
@@ -20,11 +22,46 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Video surface -->
-        <vlc:VideoView x:Name="VideoViewElement"
-                       Grid.Row="0"
-                       MediaPlayer="{Binding MediaPlayer}"
-                       Background="Black"/>
+        <!-- Video surface with zoom support -->
+        <Grid x:Name="VideoContainer" Grid.Row="0" Background="Black" ClipToBounds="True"
+              MouseLeftButtonUp="VideoContainer_MouseLeftButtonUp">
+
+            <MediaElement x:Name="VideoElement"
+                          LoadedBehavior="Manual"
+                          UnloadedBehavior="Manual"
+                          Stretch="Uniform"
+                          RenderTransformOrigin="0,0">
+                <MediaElement.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="VideoScale" ScaleX="1" ScaleY="1"/>
+                        <TranslateTransform x:Name="VideoTranslate" X="0" Y="0"/>
+                    </TransformGroup>
+                </MediaElement.RenderTransform>
+            </MediaElement>
+
+            <!-- Rubber-band selection overlay: absorbs mouse only in zoom mode -->
+            <Canvas x:Name="SelectionCanvas"
+                    Background="Transparent"
+                    Cursor="Cross"
+                    Visibility="{Binding IsZoomMode, Converter={StaticResource BoolToVis}}"
+                    MouseLeftButtonDown="SelectionCanvas_MouseLeftButtonDown"
+                    MouseMove="SelectionCanvas_MouseMove"
+                    MouseLeftButtonUp="SelectionCanvas_MouseLeftButtonUp">
+                <Rectangle x:Name="SelectionRect"
+                           Stroke="#FF6600" StrokeThickness="2"
+                           Fill="#226699FF"
+                           Visibility="Collapsed"
+                           IsHitTestVisible="False"/>
+            </Canvas>
+
+            <!-- Zoom mode hint -->
+            <TextBlock Text="Drag to select zoom region  •  Esc to cancel"
+                       Foreground="White" Background="#AA000000"
+                       Padding="8,4" FontSize="12"
+                       HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0"
+                       IsHitTestVisible="False"
+                       Visibility="{Binding IsZoomMode, Converter={StaticResource BoolToVis}}"/>
+        </Grid>
 
         <!-- Transport controls -->
         <Grid Grid.Row="1" Margin="8,6,8,8">
@@ -33,7 +70,7 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Seek slider — only seeks on thumb drag release via behavior -->
+            <!-- Seek slider -->
             <Slider Grid.Row="0"
                     Minimum="0"
                     Maximum="{Binding DurationMs}"
@@ -45,6 +82,7 @@
             </Slider>
 
             <Grid Grid.Row="1">
+                <!-- Play/Pause (center) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button Command="{Binding TogglePlayPauseCommand}" MinWidth="72" Margin="4,0">
                         <Button.Style>
@@ -60,7 +98,23 @@
                     </Button>
                 </StackPanel>
 
+                <!-- Zoom controls + time (right) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="🔍 Zoom" Command="{Binding EnterZoomModeCommand}" Margin="0,0,4,0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsZoomMode}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="✕ Reset Zoom" Command="{Binding ResetZoomCommand}"
+                            Margin="0,0,4,0"
+                            Visibility="{Binding IsZoomed, Converter={StaticResource BoolToVis}}"/>
                     <TextBlock FontFamily="Consolas" FontSize="12" VerticalAlignment="Center">
                         <Run Text="{Binding CurrentPositionMs, Converter={StaticResource MsToTime}, Mode=OneWay}"/>
                         <Run Text=" / "/>

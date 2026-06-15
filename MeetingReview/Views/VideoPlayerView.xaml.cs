@@ -1,80 +1,133 @@
-using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Interop;
+using System.Windows.Controls;
+using System.Windows.Input;
 using MeetingReview.ViewModels;
 
 namespace MeetingReview.Views;
 
 public partial class VideoPlayerView : System.Windows.Controls.UserControl
 {
-    private const int WH_MOUSE     = 7;
-    private const int HC_ACTION    = 0;
-    private const int WM_LBUTTONDOWN = 0x0201;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT { public int X; public int Y; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MOUSEHOOKSTRUCT
-    {
-        public POINT   pt;
-        public IntPtr  hwnd;
-        public uint    wHitTestCode;
-        public IntPtr  dwExtraInfo;
-    }
-
-    private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll")] private static extern IntPtr SetWindowsHookEx(int idHook, HookProc fn, IntPtr hMod, uint threadId);
-    [DllImport("user32.dll")] private static extern bool   UnhookWindowsHookEx(IntPtr hhk);
-    [DllImport("user32.dll")] private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-    [DllImport("kernel32.dll")] private static extern uint  GetCurrentThreadId();
-
-    private HookProc? _hookProc;   // held in a field to prevent GC collection
-    private IntPtr    _hookHandle;
+    private bool _isDragging;
+    private Point _dragStart;
 
     public VideoPlayerView()
     {
         InitializeComponent();
-        Loaded   += OnLoaded;
-        Unloaded += OnUnloaded;
+        Loaded += OnLoaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _hookProc   = MouseHookProc;
-        _hookHandle = SetWindowsHookEx(WH_MOUSE, _hookProc, IntPtr.Zero, GetCurrentThreadId());
+        if (DataContext is VideoPlayerViewModel vm)
+        {
+            vm.Initialize(VideoElement);
+            vm.ZoomResetRequested += (_, _) => ResetZoomTransform();
+        }
+        Keyboard.Focus(this);
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs e)
+    private void VideoContainer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (_hookHandle != IntPtr.Zero)
-        {
-            UnhookWindowsHookEx(_hookHandle);
-            _hookHandle = IntPtr.Zero;
-        }
+        if (DataContext is VideoPlayerViewModel vm && !vm.IsZoomMode)
+            vm.TogglePlayPauseCommand.Execute(null);
     }
 
-    private IntPtr MouseHookProc(int nCode, IntPtr wParam, IntPtr lParam)
+    private void SelectionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (nCode == HC_ACTION && wParam.ToInt32() == WM_LBUTTONDOWN)
-        {
-            var hs = Marshal.PtrToStructure<MOUSEHOOKSTRUCT>(lParam);
-            var screenPt = new Point(hs.pt.X, hs.pt.Y);
+        _dragStart = e.GetPosition(VideoContainer);
+        _isDragging = true;
+        SelectionCanvas.CaptureMouse();
+        Canvas.SetLeft(SelectionRect, _dragStart.X);
+        Canvas.SetTop(SelectionRect,  _dragStart.Y);
+        SelectionRect.Width  = 0;
+        SelectionRect.Height = 0;
+        SelectionRect.Visibility = Visibility.Visible;
+    }
 
-            // Queue on the dispatcher so we're not calling back into WPF from within the hook
-            Dispatcher.BeginInvoke(() =>
-            {
-                var localPt = VideoViewElement.PointFromScreen(screenPt);
-                if (localPt.X >= 0 && localPt.Y >= 0 &&
-                    localPt.X <= VideoViewElement.ActualWidth &&
-                    localPt.Y <= VideoViewElement.ActualHeight)
-                {
-                    if (DataContext is VideoPlayerViewModel vm)
-                        vm.TogglePlayPauseCommand.Execute(null);
-                }
-            });
+    private void SelectionCanvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isDragging) return;
+        var cur = e.GetPosition(VideoContainer);
+        Canvas.SetLeft(SelectionRect, Math.Min(cur.X, _dragStart.X));
+        Canvas.SetTop(SelectionRect,  Math.Min(cur.Y, _dragStart.Y));
+        SelectionRect.Width  = Math.Abs(cur.X - _dragStart.X);
+        SelectionRect.Height = Math.Abs(cur.Y - _dragStart.Y);
+    }
+
+    private void SelectionCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isDragging) return;
+        _isDragging = false;
+        SelectionCanvas.ReleaseMouseCapture();
+        SelectionRect.Visibility = Visibility.Collapsed;
+        e.Handled = true;
+
+        var end  = e.GetPosition(VideoContainer);
+        double selX = Math.Min(end.X, _dragStart.X), selW = Math.Abs(end.X - _dragStart.X);
+        double selY = Math.Min(end.Y, _dragStart.Y), selH = Math.Abs(end.Y - _dragStart.Y);
+
+        if (selW > 4 && selH > 4)
+            ApplyZoom(selX, selY, selW, selH);
+        else if (DataContext is VideoPlayerViewModel vm)
+            vm.ResetZoomCommand.Execute(null);
+    }
+
+    private void ApplyZoom(double selX, double selY, double selW, double selH)
+    {
+        double cW = VideoContainer.ActualWidth;
+        double cH = VideoContainer.ActualHeight;
+        if (cW <= 0 || cH <= 0) return;
+
+        double videoAspect = (VideoElement.NaturalVideoWidth > 0 && VideoElement.NaturalVideoHeight > 0)
+            ? (double)VideoElement.NaturalVideoWidth / VideoElement.NaturalVideoHeight
+            : cW / cH;
+        double containerAspect = cW / cH;
+
+        double lbX, lbY, lbW, lbH;
+        if (videoAspect > containerAspect)
+        {
+            lbW = cW;  lbH = cW / videoAspect;
+            lbX = 0;   lbY = (cH - lbH) / 2.0;
         }
-        return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+        else
+        {
+            lbH = cH;  lbW = cH * videoAspect;
+            lbY = 0;   lbX = (cW - lbW) / 2.0;
+        }
+
+        double clampedX = Math.Max(selX, lbX);
+        double clampedY = Math.Max(selY, lbY);
+        double clampedR = Math.Min(selX + selW, lbX + lbW);
+        double clampedB = Math.Min(selY + selH, lbY + lbH);
+
+        if (clampedR - clampedX < 4 || clampedB - clampedY < 4)
+        {
+            if (DataContext is VideoPlayerViewModel vm) vm.ResetZoomCommand.Execute(null);
+            return;
+        }
+
+        double scale = Math.Min(cW / (clampedR - clampedX), cH / (clampedB - clampedY));
+        VideoScale.ScaleX    = scale;
+        VideoScale.ScaleY    = scale;
+        VideoTranslate.X = -clampedX * scale;
+        VideoTranslate.Y = -clampedY * scale;
+
+        if (DataContext is VideoPlayerViewModel vm2) vm2.ApplyZoomRect();
+    }
+
+    private void ResetZoomTransform()
+    {
+        VideoScale.ScaleX = VideoScale.ScaleY = 1.0;
+        VideoTranslate.X  = VideoTranslate.Y  = 0;
+    }
+
+    private void OnKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && DataContext is VideoPlayerViewModel vm && vm.IsZoomMode)
+        {
+            _isDragging = false;
+            SelectionRect.Visibility = Visibility.Collapsed;
+            vm.ResetZoomCommand.Execute(null);
+        }
     }
 }

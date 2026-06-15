@@ -33,13 +33,6 @@ public partial class App : Application
         await mainVm.Settings.LoadSubViewModelsAsync();
 
         var window = new Views.MainWindow { DataContext = mainVm };
-
-        // Dispose VLC while the Win32 window handle is still valid.
-        // If we wait until OnExit, the HWND is already destroyed and
-        // MediaPlayer.Stop() inside Dispose() crashes with AccessViolationException.
-        window.Closing += (_, _) =>
-            _services?.GetService<VideoPlayerViewModel>()?.Dispose();
-
         window.Show();
     }
 
