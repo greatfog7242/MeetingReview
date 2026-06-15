@@ -20,20 +20,11 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Video surface — transparent Grid child is rendered in LibVLC's overlay window,
-             allowing WPF mouse events to reach it despite the native video HWND -->
-        <vlc:VideoView Grid.Row="0"
+        <!-- Video surface -->
+        <vlc:VideoView x:Name="VideoViewElement"
+                       Grid.Row="0"
                        MediaPlayer="{Binding MediaPlayer}"
-                       Background="Black">
-            <Grid Background="Transparent">
-                <i:Interaction.Triggers>
-                    <i:EventTrigger EventName="MouseLeftButtonUp">
-                        <i:InvokeCommandAction Command="{Binding TogglePlayPauseCommand}"
-                                               PassEventArgsToCommand="False"/>
-                    </i:EventTrigger>
-                </i:Interaction.Triggers>
-            </Grid>
-        </vlc:VideoView>
+                       Background="Black"/>
 
         <!-- Transport controls -->
         <Grid Grid.Row="1" Margin="8,6,8,8">
