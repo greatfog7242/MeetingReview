@@ -9,6 +9,16 @@ public partial class TranscriptView : UserControl
 {
     public TranscriptView() => InitializeComponent();
 
+    private void WordTextBlock_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2 && sender is System.Windows.Controls.TextBlock tb
+            && tb.DataContext is WordViewModel word)
+        {
+            word.BeginEditCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void WordTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (sender is TextBox tb && (bool)e.NewValue)

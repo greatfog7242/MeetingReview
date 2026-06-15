@@ -65,13 +65,9 @@
                                                    Cursor="Hand"
                                                    Padding="1,0,1,2"
                                                    FontSize="14"
-                                                   LineHeight="22">
+                                                   LineHeight="22"
+                                                   MouseLeftButtonDown="WordTextBlock_MouseLeftButtonDown">
                                             <i:Interaction.Triggers>
-                                                <i:EventTrigger EventName="MouseDoubleClick">
-                                                    <i:InvokeCommandAction
-                                                        Command="{Binding BeginEditCommand}"
-                                                        PassEventArgsToCommand="False"/>
-                                                </i:EventTrigger>
                                                 <i:EventTrigger EventName="MouseLeftButtonUp">
                                                     <i:InvokeCommandAction
                                                         Command="{Binding DataContext.SelectWordCommand,
