@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>MeetingReview</RootNamespace>
     <AssemblyName>MeetingReview</AssemblyName>
+    <ApplicationIcon>Assets\MeetingReview.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
