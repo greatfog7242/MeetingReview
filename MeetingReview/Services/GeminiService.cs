@@ -15,6 +15,8 @@ public sealed class GeminiService : IGeminiService
 
     public GeminiService(HttpClient http) => _http = http;
 
+    // ── Dropdown (JSON topics) ────────────────────────────────────────────
+
     public async Task<GeminiCallResult> GenerateSummaryAsync(
         string transcriptText,
         string userPrompt,
@@ -22,8 +24,8 @@ public sealed class GeminiService : IGeminiService
         string model = "gemini-2.5-flash",
         CancellationToken ct = default)
     {
-        var prompt = BuildPrompt(transcriptText, userPrompt);
-        var requestJson = BuildRequestJson(prompt);
+        var prompt = BuildDropdownPrompt(transcriptText, userPrompt);
+        var requestJson = BuildJsonRequestJson(prompt);
         var url = $"{ApiBase}/{model}:generateContent?key={apiKey}";
 
         var body = await SendWithRetryAsync(url, requestJson, ct);
@@ -44,6 +46,108 @@ public sealed class GeminiService : IGeminiService
         return new GeminiCallResult(topics, modelVersion, promptTokens, candidateTokens, totalTokens);
     }
 
+    // ── Markdown / Text (free-text) ───────────────────────────────────────
+
+    public async Task<GeminiTextResult> GenerateTextAsync(
+        string transcriptText,
+        string userPrompt,
+        string apiKey,
+        string model = "gemini-2.5-flash",
+        CancellationToken ct = default)
+    {
+        var prompt = BuildFreeTextPrompt(transcriptText, userPrompt);
+        var requestJson = BuildFreeTextRequestJson(prompt);
+        var url = $"{ApiBase}/{model}:generateContent?key={apiKey}";
+
+        var body = await SendWithRetryAsync(url, requestJson, ct);
+        var (text, modelVersion, promptTokens, candidateTokens, totalTokens) = ParseResponse(body);
+
+        return new GeminiTextResult(text, modelVersion, promptTokens, candidateTokens, totalTokens);
+    }
+
+    // ── Exportable prompt (user instructions + app additions, no transcript) ──
+
+    public string BuildExportablePrompt(string userPrompt, PromptFormat format)
+    {
+        var formatInstructions = FormatInstructions(format);
+        return $"""
+            You are a meeting summarizer. Given the following meeting transcript, {userPrompt}.
+
+            {formatInstructions}
+
+            [transcript omitted]
+            """;
+    }
+
+    // ── Internal prompt builders ──────────────────────────────────────────
+
+    private static string BuildDropdownPrompt(string transcriptText, string userPrompt) => $"""
+        {userPrompt}
+
+        TRANSCRIPT:
+        {transcriptText}
+        """;
+
+    private static string BuildFreeTextPrompt(string transcriptText, string userPrompt) => $"""
+        You are a meeting summarizer. Given the following meeting transcript, {userPrompt}.
+
+        {FreeTextFormatInstructions}
+
+        TRANSCRIPT:
+        {transcriptText}
+        """;
+
+    private static string FormatInstructions(PromptFormat format) => format switch
+    {
+        PromptFormat.Dropdown => DropdownFormatInstructions,
+        PromptFormat.Markdown => FreeTextFormatInstructions,
+        PromptFormat.Text     => FreeTextFormatInstructions,
+        _                     => FreeTextFormatInstructions
+    };
+
+    private const string DropdownFormatInstructions =
+        """
+        Return ONLY a valid JSON array — no markdown, no explanation, no code fences. Each element must have exactly these fields:
+        - "title": short topic title (string)
+        - "detailedContent": detailed notes about the topic as discussed (string)
+        - "startMs": timestamp in milliseconds where this topic begins (integer)
+        - "endMs": timestamp in milliseconds where this topic ends (integer)
+        """;
+
+    private const string FreeTextFormatInstructions =
+        "Return your response in well-formatted Markdown.";
+
+    // ── Request builders ──────────────────────────────────────────────────
+
+    private static string BuildJsonRequestJson(string prompt)
+    {
+        var escapedPrompt = JsonSerializer.Serialize(prompt);
+        return $$"""
+            {
+              "contents": [{"parts": [{"text": {{escapedPrompt}}}]}],
+              "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.2
+              }
+            }
+            """;
+    }
+
+    private static string BuildFreeTextRequestJson(string prompt)
+    {
+        var escapedPrompt = JsonSerializer.Serialize(prompt);
+        return $$"""
+            {
+              "contents": [{"parts": [{"text": {{escapedPrompt}}}]}],
+              "generationConfig": {
+                "temperature": 0.3
+              }
+            }
+            """;
+    }
+
+    // ── HTTP + response helpers ───────────────────────────────────────────
+
     private async Task<string> SendWithRetryAsync(string url, string requestJson, CancellationToken ct)
     {
         for (int attempt = 0; attempt < 2; attempt++)
@@ -58,7 +162,6 @@ public sealed class GeminiService : IGeminiService
 
             var errorBody = await response.Content.ReadAsStringAsync(ct);
 
-            // On 429 rate-limit, wait for Retry-After (or 30 s) then try once more
             if ((int)response.StatusCode == 429 && attempt == 0)
             {
                 int delaySec = 30;
@@ -70,7 +173,6 @@ public sealed class GeminiService : IGeminiService
                 continue;
             }
 
-            // Extract the human-readable message from the Gemini error JSON if present
             string detail = TryExtractGeminiError(errorBody)
                             ?? $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
 
@@ -94,33 +196,6 @@ public sealed class GeminiService : IGeminiService
         }
         catch { }
         return null;
-    }
-
-    private static string BuildPrompt(string transcriptText, string userPrompt) => $"""
-        You are a meeting summarizer. Given the following meeting transcript, {userPrompt}.
-
-        Return ONLY a valid JSON array — no markdown, no explanation, no code fences. Each element must have exactly these fields:
-        - "title": short topic title (string)
-        - "detailedContent": detailed notes about the topic as discussed (string)
-        - "startMs": timestamp in milliseconds where this topic begins (integer)
-        - "endMs": timestamp in milliseconds where this topic ends (integer)
-
-        TRANSCRIPT:
-        {transcriptText}
-        """;
-
-    private static string BuildRequestJson(string prompt)
-    {
-        var escapedPrompt = JsonSerializer.Serialize(prompt);
-        return $$"""
-            {
-              "contents": [{"parts": [{"text": {{escapedPrompt}}}]}],
-              "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.2
-              }
-            }
-            """;
     }
 
     private static (string text, string modelVersion, int promptTokens, int candidateTokens, int totalTokens)

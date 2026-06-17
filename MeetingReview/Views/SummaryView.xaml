@@ -4,23 +4,91 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:MeetingReview.ViewModels"
+             xmlns:models="clr-namespace:MeetingReview.Models"
+             xmlns:mdxaml="clr-namespace:MdXaml;assembly=MdXaml"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:SummaryViewModel, IsDesignTimeCreatable=False}">
 
     <DockPanel>
-        <!-- Prompt + generate button -->
+
+        <!-- ── Controls panel ───────────────────────────────────────────── -->
         <StackPanel DockPanel.Dock="Top" Margin="8,8,8,4">
-            <Label Content="Summary Prompt" FontWeight="Medium" Padding="0,0,0,2"/>
-            <TextBox Text="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}"
+
+            <!-- Template selector row -->
+            <Label Content="Prompt Template" FontWeight="Medium" Padding="0,0,0,2"/>
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0"
+                          ItemsSource="{Binding Templates}"
+                          DisplayMemberPath="Name"
+                          SelectedItem="{Binding SelectedTemplate}"
+                          Margin="0,0,4,0"/>
+                <Button Grid.Column="1"
+                        Content="New"
+                        Command="{Binding NewTemplateCommand}"
+                        Padding="10,2"/>
+            </Grid>
+
+            <!-- Name + Format row -->
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <Label Content="Name" FontWeight="Medium" Padding="0,0,0,2"/>
+                    <TextBox Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <Label Content="Format" FontWeight="Medium" Padding="0,0,0,2"/>
+                    <ComboBox ItemsSource="{Binding AllFormats}"
+                              SelectedItem="{Binding EditFormat}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Prompt TextBox -->
+            <Label Content="Prompt" FontWeight="Medium" Padding="0,0,0,2"/>
+            <TextBox Text="{Binding EditPrompt, UpdateSourceTrigger=PropertyChanged}"
                      TextWrapping="Wrap"
                      AcceptsReturn="False"
-                     Height="52"
+                     Height="60"
                      VerticalScrollBarVisibility="Auto"
                      Margin="0,0,0,6"/>
+
+            <!-- Save / Delete -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <Button Content="Save Template"
+                        Command="{Binding SaveTemplateCommand}"
+                        Padding="10,3"
+                        Margin="0,0,6,0"/>
+                <!-- Delete shown only when a template is selected -->
+                <Button Content="Delete Template"
+                        Command="{Binding DeleteTemplateCommand}"
+                        Padding="10,3">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTemplate}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+
+            <!-- Generate -->
             <Button Content="Generate Summary"
                     Command="{Binding GenerateSummaryCommand}"
                     HorizontalAlignment="Stretch"
                     Margin="0,0,0,4"/>
+
+            <!-- Export (shown when there is content) -->
             <Button Content="Export Markdown"
                     Command="{Binding ExportMarkdownCommand}"
                     HorizontalAlignment="Stretch">
@@ -28,7 +96,7 @@
                     <Style TargetType="Button">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasTopics}" Value="True">
+                            <DataTrigger Binding="{Binding HasContent}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -36,7 +104,7 @@
                 </Button.Style>
             </Button>
 
-            <!-- Error message — visible only when non-null -->
+            <!-- Error -->
             <TextBlock TextWrapping="Wrap"
                        Foreground="#C00"
                        FontSize="12"
@@ -55,7 +123,7 @@
             </TextBlock>
         </StackPanel>
 
-        <!-- Loading indicator -->
+        <!-- ── Loading bar ───────────────────────────────────────────────── -->
         <ProgressBar DockPanel.Dock="Top"
                      IsIndeterminate="True"
                      Height="3"
@@ -72,39 +140,88 @@
             </ProgressBar.Style>
         </ProgressBar>
 
-        <!-- Topic accordion -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Topics}" Padding="4">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Expander IsExpanded="{Binding IsExpanded}" Margin="0,2">
-                            <Expander.Header>
-                                <!--
-                                    Button rather than EventTrigger on Expanded,
-                                    so programmatic IsExpanded changes (from HighlightTopicAt)
-                                    do not trigger video navigation.
-                                -->
-                                <Button Content="{Binding Title}"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        FontWeight="SemiBold"
-                                        HorizontalAlignment="Left"
-                                        Padding="0"
-                                        Cursor="Hand"
-                                        Command="{Binding DataContext.NavigateToTimeCommand,
-                                                  RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                        CommandParameter="{Binding StartMs}"/>
-                            </Expander.Header>
-                            <TextBlock Text="{Binding DetailedContent}"
-                                       TextWrapping="Wrap"
-                                       Padding="12,6"
-                                       Foreground="#444"
-                                       FontSize="13"/>
-                        </Expander>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <!-- ── Result area – three overlapping panels, one visible at a time ── -->
+        <Grid>
+
+            <!-- Dropdown: topic accordion -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentFormat}"
+                                         Value="{x:Static models:PromptFormat.Dropdown}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
+                <ItemsControl ItemsSource="{Binding Topics}" Padding="4">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Expander IsExpanded="{Binding IsExpanded}" Margin="0,2">
+                                <Expander.Header>
+                                    <Button Content="{Binding Title}"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            FontWeight="SemiBold"
+                                            HorizontalAlignment="Left"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            Command="{Binding DataContext.NavigateToTimeCommand,
+                                                      RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                            CommandParameter="{Binding StartMs}"/>
+                                </Expander.Header>
+                                <TextBlock Text="{Binding DetailedContent}"
+                                           TextWrapping="Wrap"
+                                           Padding="12,6"
+                                           Foreground="#444"
+                                           FontSize="13"/>
+                            </Expander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Markdown: rendered -->
+            <mdxaml:MarkdownScrollViewer Markdown="{Binding ResponseText}"
+                                         Padding="8">
+                <mdxaml:MarkdownScrollViewer.Style>
+                    <Style TargetType="mdxaml:MarkdownScrollViewer">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentFormat}"
+                                         Value="{x:Static models:PromptFormat.Markdown}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </mdxaml:MarkdownScrollViewer.Style>
+            </mdxaml:MarkdownScrollViewer>
+
+            <!-- Text: plain -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentFormat}"
+                                         Value="{x:Static models:PromptFormat.Text}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
+                <TextBlock Text="{Binding ResponseText}"
+                           TextWrapping="Wrap"
+                           Padding="8"
+                           FontSize="13"
+                           Foreground="#333"/>
+            </ScrollViewer>
+
+        </Grid>
+
     </DockPanel>
 </UserControl>

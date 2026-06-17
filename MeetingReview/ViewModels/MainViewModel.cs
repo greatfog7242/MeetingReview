@@ -122,7 +122,6 @@ public partial class MainViewModel : ObservableObject
             Summary.TranscriptText = await File.ReadAllTextAsync(txtPath, ct);
             _jsonPath = jsonPath;
             UpdateSavePath();
-            await Summary.TryLoadSavedAsync(ct);
 
             var srtPath = Path.Combine(folder, "transcript.srt");
             if (File.Exists(srtPath))
@@ -133,10 +132,10 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateSavePath()
     {
-        Summary.SavePath = _jsonPath == null
+        Summary.BaseRecordingPath = _jsonPath == null
             ? null
             : Path.Combine(Path.GetDirectoryName(_jsonPath)!,
-                           Path.GetFileNameWithoutExtension(_jsonPath) + ".summary.json");
+                           Path.GetFileNameWithoutExtension(_jsonPath));
     }
 
     private string BuildTranscriptText() =>

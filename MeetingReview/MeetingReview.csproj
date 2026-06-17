@@ -12,11 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\meetingreview.png"/>
+    <Resource Include="Assets\meetingreview.png" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="MdXaml" Version="1.27.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
