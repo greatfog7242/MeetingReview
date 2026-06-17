@@ -8,4 +8,5 @@ namespace MeetingReview;
 [JsonSerializable(typeof(List<WhisperWordDto>))]
 [JsonSerializable(typeof(List<TopicSummaryDto>))]
 [JsonSerializable(typeof(SummarySaveDto))]
+[JsonSerializable(typeof(List<PromptTemplateDto>))]
 internal partial class AppJsonContext : JsonSerializerContext { }

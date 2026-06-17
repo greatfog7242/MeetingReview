@@ -31,6 +31,7 @@ public partial class App : Application
         var mainVm = _services.GetRequiredService<MainViewModel>();
         mainVm.Settings.Load();
         await mainVm.Settings.LoadSubViewModelsAsync();
+        await mainVm.Summary.LoadTemplatesAsync();
 
         var window = new Views.MainWindow { DataContext = mainVm };
         window.Show();
