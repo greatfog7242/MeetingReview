@@ -372,8 +372,19 @@ public partial class SummaryViewModel : ObservableObject
 
     public void HighlightTopicAt(long positionMs)
     {
+        // Among topics whose range contains positionMs, pick the one with the latest
+        // start time (most specific match). Expand only that one, collapse all others.
+        TopicSummary? best = null;
         foreach (var topic in Topics)
-            topic.IsExpanded = topic.StartMs <= positionMs && positionMs <= topic.EndMs;
+        {
+            if (topic.StartMs <= positionMs && positionMs <= topic.EndMs)
+            {
+                if (best == null || topic.StartMs > best.StartMs)
+                    best = topic;
+            }
+        }
+        foreach (var topic in Topics)
+            topic.IsExpanded = ReferenceEquals(topic, best);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

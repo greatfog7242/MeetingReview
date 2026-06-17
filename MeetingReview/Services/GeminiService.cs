@@ -82,7 +82,9 @@ public sealed class GeminiService : IGeminiService
     // ── Internal prompt builders ──────────────────────────────────────────
 
     private static string BuildDropdownPrompt(string transcriptText, string userPrompt) => $"""
-        {userPrompt}
+        You are a meeting summarizer. Given the following meeting transcript, {userPrompt}.
+
+        {DropdownFormatInstructions}
 
         TRANSCRIPT:
         {transcriptText}
