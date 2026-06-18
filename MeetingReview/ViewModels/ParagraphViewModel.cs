@@ -8,6 +8,8 @@ public partial class ParagraphViewModel : ObservableObject
     internal long StartMs { get; }
     internal long EndMs { get; }
     [ObservableProperty] private string _text;
+    [ObservableProperty] private bool _isSearchMatch;
+    [ObservableProperty] private bool _isSearchActive;
     public string Speaker { get; }
     public IReadOnlyList<WordViewModel> Words { get; }
 

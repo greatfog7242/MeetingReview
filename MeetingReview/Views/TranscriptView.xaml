@@ -13,145 +13,213 @@
     </UserControl.Resources>
 
     <DockPanel>
+
+        <!-- ── Top toolbar ───────────────────────────────────────────────── -->
         <Border DockPanel.Dock="Top"
                 Padding="8,6"
                 BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
                 Visibility="{Binding HasParagraphs, Converter={StaticResource BoolToVis}}">
-            <Button Content="Export Captions (.srt)"
-                    Command="{Binding ExportSrtCommand}"
-                    HorizontalAlignment="Left"/>
+            <StackPanel>
+
+                <!-- Export SRT -->
+                <Button Content="Export Captions (.srt)"
+                        Command="{Binding ExportSrtCommand}"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,6"/>
+
+                <!-- Search input row -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,4,0">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Button Grid.Column="1"
+                            Content="Search"
+                            Command="{Binding SearchCommand}"/>
+                </Grid>
+
+                <!-- Prev / Next / status row -->
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Content="◀ Prev"
+                            Command="{Binding SearchPreviousCommand}"
+                            Margin="0,0,4,0"
+                            ToolTip="Previous result"/>
+                    <Button Grid.Column="1"
+                            Content="Next ▶"
+                            Command="{Binding SearchNextCommand}"
+                            Margin="0,0,8,0"
+                            ToolTip="Next result"/>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding SearchStatus}"
+                               VerticalAlignment="Center"
+                               Foreground="#555"
+                               FontSize="12"/>
+                </Grid>
+
+            </StackPanel>
         </Border>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
-        <i:Interaction.Behaviors>
-            <b:ScrollToActiveWordBehavior Transcript="{Binding}"/>
-        </i:Interaction.Behaviors>
+        <!-- ── Transcript scroll area ────────────────────────────────────── -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <i:Interaction.Behaviors>
+                <b:ScrollToActiveWordBehavior Transcript="{Binding}"/>
+            </i:Interaction.Behaviors>
 
-        <!-- Paragraphs — virtualization disabled so BringIntoView can find word elements -->
-        <ItemsControl ItemsSource="{Binding Paragraphs}"
-                      Padding="12"
-                      VirtualizingPanel.IsVirtualizing="False">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Margin="0,0,0,14">
-                        <!-- Speaker label — hidden when speaker is empty string -->
-                        <TextBlock FontSize="11" FontWeight="SemiBold"
-                                   Foreground="#888" Margin="0,0,0,2"
-                                   Text="{Binding Speaker, StringFormat='Speaker {0}'}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Speaker}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+            <!-- Paragraphs — virtualization disabled so BringIntoView can find word elements -->
+            <ItemsControl ItemsSource="{Binding Paragraphs}"
+                          Padding="12"
+                          VirtualizingPanel.IsVirtualizing="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,0,0,14">
+                            <!-- Speaker label — hidden when speaker is empty string -->
+                            <TextBlock FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#888" Margin="0,0,0,2"
+                                       Text="{Binding Speaker, StringFormat='Speaker {0}'}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Speaker}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
 
-                        <!-- Word-level view: only when the JSON included word timestamps -->
-                        <ItemsControl ItemsSource="{Binding Words}"
-                                      VirtualizingPanel.IsVirtualizing="False">
-                            <ItemsControl.Style>
-                                <Style TargetType="ItemsControl">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Words.Count}" Value="0">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ItemsControl.Style>
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <!-- Grid overlays TextBox on TextBlock so word width is preserved during edit -->
-                                    <Grid>
-                                        <!-- Read mode: clickable TextBlock; Hidden (not Collapsed) during edit to keep width -->
-                                        <TextBlock Text="{Binding Text}"
-                                                   Cursor="Hand"
-                                                   Padding="1,0,1,2"
-                                                   FontSize="14"
-                                                   LineHeight="22"
-                                                   MouseLeftButtonDown="WordTextBlock_MouseLeftButtonDown">
-                                            <i:Interaction.Triggers>
-                                                <i:EventTrigger EventName="MouseLeftButtonUp">
-                                                    <i:InvokeCommandAction
-                                                        Command="{Binding DataContext.SelectWordCommand,
-                                                            RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                        CommandParameter="{Binding}"
-                                                        PassEventArgsToCommand="False"/>
-                                                </i:EventTrigger>
-                                            </i:Interaction.Triggers>
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Background" Value="Transparent"/>
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                            <Setter Property="Background" Value="#FFE082"/>
-                                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                                            <Setter Property="Visibility" Value="Hidden"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                            <!-- Word-level view: only when the JSON included word timestamps -->
+                            <ItemsControl ItemsSource="{Binding Words}"
+                                          VirtualizingPanel.IsVirtualizing="False">
+                                <ItemsControl.Style>
+                                    <Style TargetType="ItemsControl">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Words.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ItemsControl.Style>
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- Grid overlays TextBox on TextBlock so word width is preserved during edit -->
+                                        <Grid>
+                                            <!-- Read mode: clickable TextBlock; Hidden (not Collapsed) during edit to keep width -->
+                                            <TextBlock Text="{Binding Text}"
+                                                       Cursor="Hand"
+                                                       Padding="1,0,1,2"
+                                                       FontSize="14"
+                                                       LineHeight="22"
+                                                       MouseLeftButtonDown="WordTextBlock_MouseLeftButtonDown">
+                                                <i:Interaction.Triggers>
+                                                    <i:EventTrigger EventName="MouseLeftButtonUp">
+                                                        <i:InvokeCommandAction
+                                                            Command="{Binding DataContext.SelectWordCommand,
+                                                                RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                            CommandParameter="{Binding}"
+                                                            PassEventArgsToCommand="False"/>
+                                                    </i:EventTrigger>
+                                                </i:Interaction.Triggers>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="Background" Value="#FFE082"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                            <!-- Search match: light blue -->
+                                                            <DataTrigger Binding="{Binding IsSearchMatch}" Value="True">
+                                                                <Setter Property="Background" Value="#BBDEFB"/>
+                                                            </DataTrigger>
+                                                            <!-- Current search result: orange (wins over match + active) -->
+                                                            <DataTrigger Binding="{Binding IsSearchActive}" Value="True">
+                                                                <Setter Property="Background" Value="#FF9800"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
 
-                                        <!-- Edit mode: inline TextBox overlaid on the hidden TextBlock -->
-                                        <TextBox Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontSize="14"
-                                                 Padding="1,0,1,2"
-                                                 BorderThickness="0,0,0,1"
-                                                 BorderBrush="#BDBDBD"
-                                                 Background="White"
-                                                 IsVisibleChanged="WordTextBox_IsVisibleChanged"
-                                                 KeyDown="WordTextBox_KeyDown"
-                                                 LostFocus="WordTextBox_LostFocus">
-                                            <TextBox.Style>
-                                                <Style TargetType="TextBox">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBox.Style>
-                                        </TextBox>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                            <!-- Edit mode: inline TextBox overlaid on the hidden TextBlock -->
+                                            <TextBox Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="14"
+                                                     Padding="1,0,1,2"
+                                                     BorderThickness="0,0,0,1"
+                                                     BorderBrush="#BDBDBD"
+                                                     Background="White"
+                                                     IsVisibleChanged="WordTextBox_IsVisibleChanged"
+                                                     KeyDown="WordTextBox_KeyDown"
+                                                     LostFocus="WordTextBox_LostFocus">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                        <!-- Segment-text fallback: when the JSON has no word timestamps -->
-                        <TextBlock Text="{Binding Text}"
-                                   FontSize="14"
-                                   TextWrapping="Wrap"
-                                   Padding="1,0">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Words.Count}" Value="0">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </ScrollViewer>
+                            <!-- Segment-text fallback: when the JSON has no word timestamps -->
+                            <TextBlock Text="{Binding Text}"
+                                       FontSize="14"
+                                       TextWrapping="Wrap"
+                                       Padding="1,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Words.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSearchMatch}" Value="True">
+                                                <Setter Property="Background" Value="#BBDEFB"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSearchActive}" Value="True">
+                                                <Setter Property="Background" Value="#FF9800"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
     </DockPanel>
 </UserControl>

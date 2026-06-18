@@ -12,6 +12,8 @@ public partial class WordViewModel : ObservableObject
     [ObservableProperty] private string _text;
     [ObservableProperty] private bool _isActive;
     [ObservableProperty] private bool _isEditing;
+    [ObservableProperty] private bool _isSearchMatch;
+    [ObservableProperty] private bool _isSearchActive;
 
     private string _originalText = "";
 
